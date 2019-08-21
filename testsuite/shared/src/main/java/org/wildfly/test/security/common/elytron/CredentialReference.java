@@ -33,6 +33,8 @@ public class CredentialReference implements CliFragment {
 
     public static final CredentialReference EMPTY = CredentialReference.builder().build();
 
+    public static final String ATTRIBUTE_NAME = "credential-reference";
+
     private final String store;
     private final String alias;
     private final String clearText;
@@ -47,18 +49,31 @@ public class CredentialReference implements CliFragment {
     public String asString() {
         StringBuilder sb = new StringBuilder();
         if (isNotBlank(alias) || isNotBlank(clearText) || isNotBlank(store)) {
-            sb.append("credential-reference={ ");
-            if (isNotBlank(alias)) {
-                sb.append(String.format("alias=\"%s\", ", alias));
-            }
-            if (isNotBlank(store)) {
-                sb.append(String.format("store=\"%s\", ", store));
-            }
-            if (isNotBlank(clearText)) {
-                sb.append(String.format("clear-text=\"%s\"", clearText));
-            }
-            sb.append("}, ");
+            sb.append(ATTRIBUTE_NAME)
+                    .append("= ")
+                    .append(getValueAsString())
+                    .append(", ");
         }
+        return sb.toString();
+    }
+
+    /**
+     * Get credential reference object as string
+     * @return credential reference value as string
+     */
+    public String getValueAsString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{ ");
+        if (isNotBlank(alias)) {
+            sb.append(String.format("alias=\"%s\", ", alias));
+        }
+        if (isNotBlank(store)) {
+            sb.append(String.format("store=\"%s\", ", store));
+        }
+        if (isNotBlank(clearText)) {
+            sb.append(String.format("clear-text=\"%s\"", clearText));
+        }
+        sb.append("}");
         return sb.toString();
     }
 

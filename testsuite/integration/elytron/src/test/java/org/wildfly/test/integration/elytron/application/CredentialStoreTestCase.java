@@ -183,6 +183,95 @@ public class CredentialStoreTestCase extends AbstractCredentialStoreTestCase {
         assertAliasAndSecretSupported(CS_NAME_MODIFIABLE, alias, "test");
     }
 
+    /**
+     * Test that value passed in {@code clear-text} is saved under new {@code alias} in credential store {@code store}.
+     * {@code alias} doesn't exist in {@code store} yet.
+     */
+    @Test
+    public void testAutoPassEncryptionCreate() throws Exception {
+        final String aliasRef = generateString(10, 'x');
+        final String clearTextRef = generateString(10, 'y');
+        final CredentialReference credentialReferenceValue = CredentialReference.builder()
+                .withAlias(aliasRef)
+                .withClearText(clearTextRef)
+                .withStore(CS_NAME_MODIFIABLE)
+                .build();
+        try (CLIWrapper cli = new CLIWrapper(true)) {
+            try {
+                cli.sendLine(String.format("/subsystem=elytron/credential-store=%s:write-attribute(name=%s, %s)",
+                        CS_NAME_CLEAR, CredentialReference.ATTRIBUTE_NAME, credentialReferenceValue.getValueAsString()));
+                assertCredentialValue(CS_NAME_MODIFIABLE, aliasRef, clearTextRef);
+                //TODO check message in output that new alias was created!
+                //TODO check no clear-text is present in model
+            } finally {
+                cli.sendLine(
+                        String.format("/subsystem=elytron/credential-store=%s:remove-alias(alias=%s)", CS_NAME_MODIFIABLE, aliasRef));
+            }
+        }
+    }
+
+    /**
+     * Test that value passed in {@code clear-text} is updated in {@code alias} in credential store {@code store}.
+     * {@code alias} already exists in {@code store} and it is being updated.
+     */
+    @Test
+    public void testAutoPassEncryptionUpdate() throws Exception {
+        final String defaultAliasValue = generateString(10, 'z');
+        final String aliasRef = generateString(10, 'x');
+        final String clearTextRef = generateString(10, 'y');
+        final CredentialReference credentialReferenceValue = CredentialReference.builder()
+                .withAlias(aliasRef)
+                .withClearText(clearTextRef)
+                .withStore(CS_NAME_MODIFIABLE)
+                .build();
+        try (CLIWrapper cli = new CLIWrapper(true)) {
+            try {
+                //add an alias which should be updated later
+                cli.sendLine(String.format("/subsystem=elytron/credential-store=%s:add-alias(alias=%s, secret-value=\"%s\")",
+                        CS_NAME_MODIFIABLE, aliasRef, defaultAliasValue));
+                assertCredentialValue(CS_NAME_MODIFIABLE, aliasRef, defaultAliasValue);
+                cli.sendLine(String.format("/subsystem=elytron/credential-store=%s:write-attribute(name=%s, %s)",
+                        CS_NAME_CLEAR, CredentialReference.ATTRIBUTE_NAME, credentialReferenceValue.getValueAsString()));
+                assertCredentialValue(CS_NAME_MODIFIABLE, aliasRef, clearTextRef);
+                //TODO check message in output that the alias was updated!
+                //TODO check no clear-text is present in model
+            } finally {
+                cli.sendLine(
+                        String.format("/subsystem=elytron/credential-store=%s:remove-alias(alias=%s)", CS_NAME_MODIFIABLE, aliasRef));
+            }
+        }
+    }
+
+    /**
+     * Test that new {@code alias} is not created in unmodifiable credential store and operation is rolled back
+     */
+    @Test
+    public void testAutoPassEncryptionCreateUnmodifiable() throws Exception {
+        final String aliasRef = generateString(10, 'x');
+        final String clearTextRef = generateString(10, 'y');
+        final CredentialReference credentialReferenceValue = CredentialReference.builder()
+                .withAlias(aliasRef)
+                .withClearText(clearTextRef)
+                .withStore(CS_NAME_CLEAR)
+                .build();
+        try (CLIWrapper cli = new CLIWrapper(true)) {
+            try {
+                cli.sendLine(String.format("/subsystem=elytron/credential-store=%s:read-attribute(name=%s)",
+                        CS_NAME_CRED_REF, CredentialReference.ATTRIBUTE_NAME));
+                //TODO verify which key needs to be obtained to get default value
+                final ModelNode defaultCrValue = cli.readAllAsOpResult().getResponseNode().get("value");
+                cli.sendLine(String.format("/subsystem=elytron/credential-store=%s:write-attribute(name=%s, %s)",
+                        CS_NAME_CRED_REF, CredentialReference.ATTRIBUTE_NAME, credentialReferenceValue.getValueAsString()));
+                final CLIOpResult opResult = cli.readAllAsOpResult();
+                assertFalse("Adding alias to non-modifiable credential store should fail.", opResult.isIsOutcomeSuccess());
+                //TODO assert credential-reference attribute has default value (after rollback)
+            } finally {
+                cli.sendLine(
+                        String.format("/subsystem=elytron/credential-store=%s:remove-alias(alias=%s)", CS_NAME_MODIFIABLE, aliasRef));
+            }
+        }
+    }
+
     private void testUnmodifiableInternally(final String csName) throws IOException, Exception {
         try (CLIWrapper cli = new CLIWrapper(true)) {
 
