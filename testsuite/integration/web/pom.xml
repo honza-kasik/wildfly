@@ -687,5 +687,435 @@
             </build>
         </profile>
 
+
+        <!-- Test against bootable jar -->
+        <profile>
+            <id>bootablejar.profile</id>
+            <activation>
+                <property>
+                    <name>ts.bootable</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly.arquillian</groupId>
+                    <artifactId>wildfly-arquillian-container-bootable</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!-- Disable the standard copy-based provisioning -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>ts.copy-wildfly</id>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <phase>none</phase>
+                            </execution>
+                            <!-- Copy users and roles config from shared resources into the other installations we add
+                                 so tests against that can utilize those. -->
+                            <execution>
+                                <id>ts.config-as.copy-users-legacy</id>
+                                <phase>generate-test-resources</phase>
+                                <goals><goal>copy-resources</goal></goals>
+                                <inherited>true</inherited>
+                                <configuration>
+                                    <outputDirectory>${basedir}/target/wildfly-legacy-https/standalone/configuration</outputDirectory>
+                                    <overwrite>true</overwrite>
+                                    <resources>
+                                        <resource>
+                                            <directory>../../shared/src/main/resources</directory>
+                                            <includes><include>application*.properties</include></includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ts.config-as.copy-users-jaxrs</id>
+                                <phase>generate-test-resources</phase>
+                                <goals><goal>copy-resources</goal></goals>
+                                <inherited>true</inherited>
+                                <configuration>
+                                    <outputDirectory>${basedir}/target/wildfly-jaxrs/standalone/configuration</outputDirectory>
+                                    <overwrite>true</overwrite>
+                                    <resources>
+                                        <resource>
+                                            <directory>../../shared/src/main/resources</directory>
+                                            <includes><include>application*.properties</include></includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ts.config-as.copy-users-cloud</id>
+                                <phase>generate-test-resources</phase>
+                                <goals><goal>copy-resources</goal></goals>
+                                <inherited>true</inherited>
+                                <configuration>
+                                    <outputDirectory>${basedir}/target/wildfly-cloud/standalone/configuration</outputDirectory>
+                                    <overwrite>true</overwrite>
+                                    <resources>
+                                        <resource>
+                                            <directory>../../shared/src/main/resources</directory>
+                                            <includes><include>application*.properties</include></includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- Disable the standard configurations -->
+                    <plugin>
+                        <groupId>org.wildfly.plugins</groupId>
+                        <artifactId>wildfly-maven-plugin</artifactId>
+                        <version>${version.org.wildfly.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>ts.config-as.configure-lb</id>
+                                <phase>none</phase>
+                                <goals>
+                                    <goal>execute-commands</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>ts.config-as.configure-wildfly</id>
+                                <phase>none</phase>
+                                <goals>
+                                    <goal>execute-commands</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.wildfly.plugins</groupId>
+                        <artifactId>wildfly-jar-maven-plugin</artifactId>
+                        <version>${version.org.wildfly.jar.plugin}</version>
+                        <executions>
+                            <!-- Package a datasources-web-server -->
+                            <execution>
+                                <id>bootable-jar-web-profile-packaging</id>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                                <phase>process-test-resources</phase>
+                                <configuration>
+                                    <output-file-name>test-wildfly-web-profile.jar</output-file-name>
+                                    <hollowJar>true</hollowJar>
+                                    <record-state>false</record-state>
+                                    <log-time>${galleon.log.time}</log-time>
+                                    <offline>true</offline>
+                                    <plugin-options>
+                                        <jboss-maven-dist/>
+                                        <jboss-fork-embedded>${galleon.fork.embedded}</jboss-fork-embedded>
+                                    </plugin-options>
+                                    <feature-packs>
+                                        <feature-pack>
+                                            <groupId>${testsuite.ee.galleon.pack.groupId}</groupId>
+                                            <artifactId>${testsuite.ee.galleon.pack.artifactId}</artifactId>
+                                            <version>${testsuite.ee.galleon.pack.version}</version>
+                                            <inherit-configs>false</inherit-configs>
+                                            <inherit-packages>false</inherit-packages>
+                                        </feature-pack>
+                                    </feature-packs>
+                                    <layers>
+                                        <layer>datasources-web-server</layer>
+                                    </layers>
+                                    <excluded-layers>
+                                        <layer>datasources</layer>
+                                    </excluded-layers>
+                                </configuration>
+                            </execution>
+
+                            <!-- Package a datasources-web-server with legacy-security as well -->
+                            <execution>
+                                <id>bootable-jar-web-legacy-security-packaging</id>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                                <phase>process-test-resources</phase>
+                                <configuration>
+                                    <output-file-name>test-wildfly-web-legacy-security.jar</output-file-name>
+                                    <hollowJar>true</hollowJar>
+                                    <record-state>false</record-state>
+                                    <log-time>${galleon.log.time}</log-time>
+                                    <offline>true</offline>
+                                    <plugin-options>
+                                        <jboss-maven-dist/>
+                                        <jboss-fork-embedded>${galleon.fork.embedded}</jboss-fork-embedded>
+                                    </plugin-options>
+                                    <feature-packs>
+                                        <feature-pack>
+                                            <groupId>${testsuite.ee.galleon.pack.groupId}</groupId>
+                                            <artifactId>${testsuite.ee.galleon.pack.artifactId}</artifactId>
+                                            <version>${testsuite.ee.galleon.pack.version}</version>
+                                            <inherit-configs>false</inherit-configs>
+                                            <inherit-packages>false</inherit-packages>
+                                        </feature-pack>
+                                    </feature-packs>
+                                    <layers>
+                                        <layer>datasources-web-server</layer>
+                                        <layer>legacy-security</layer>
+                                    </layers>
+                                    <excluded-layers>
+                                        <layer>datasources</layer>
+                                    </excluded-layers>
+                                </configuration>
+                            </execution>
+
+                            <!-- Package a datasources-web-server with support for HTTPS via an autogenerated cert -->
+                            <execution>
+                                <id>bootable-jar-undertow-https-packaging</id>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                                <phase>process-test-resources</phase>
+                                <configuration>
+                                    <output-file-name>test-wildfly-undertow-https.jar</output-file-name>
+                                    <hollowJar>true</hollowJar>
+                                    <record-state>false</record-state>
+                                    <log-time>${galleon.log.time}</log-time>
+                                    <offline>true</offline>
+                                    <plugin-options>
+                                        <jboss-maven-dist/>
+                                        <jboss-fork-embedded>${galleon.fork.embedded}</jboss-fork-embedded>
+                                    </plugin-options>
+                                    <feature-packs>
+                                        <feature-pack>
+                                            <groupId>${testsuite.ee.galleon.pack.groupId}</groupId>
+                                            <artifactId>${testsuite.ee.galleon.pack.artifactId}</artifactId>
+                                            <version>${testsuite.ee.galleon.pack.version}</version>
+                                            <inherit-configs>false</inherit-configs>
+                                            <inherit-packages>false</inherit-packages>
+                                        </feature-pack>
+                                    </feature-packs>
+                                    <layers>
+                                        <layer>datasources-web-server</layer>
+                                        <layer>undertow-legacy-https</layer>
+                                    </layers>
+                                    <excluded-layers>
+                                        <layer>datasources</layer>
+                                    </excluded-layers>
+                                </configuration>
+                            </execution>
+
+                            <!-- Provision a jaxrs-server -->
+                            <execution>
+                                <id>bootable-jar-jaxrs-packaging</id>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                                <phase>process-test-resources</phase>
+                                <configuration>
+                                    <output-file-name>test-wildfly-jaxrs.jar</output-file-name>
+                                    <hollowJar>true</hollowJar>
+                                    <record-state>false</record-state>
+                                    <log-time>${galleon.log.time}</log-time>
+                                    <offline>true</offline>
+                                    <plugin-options>
+                                        <jboss-maven-dist/>
+                                        <jboss-fork-embedded>${galleon.fork.embedded}</jboss-fork-embedded>
+                                    </plugin-options>
+                                    <feature-packs>
+                                        <feature-pack>
+                                            <groupId>${testsuite.ee.galleon.pack.groupId}</groupId>
+                                            <artifactId>${testsuite.ee.galleon.pack.artifactId}</artifactId>
+                                            <version>${testsuite.ee.galleon.pack.version}</version>
+                                            <inherit-configs>false</inherit-configs>
+                                            <inherit-packages>false</inherit-packages>
+                                        </feature-pack>
+                                    </feature-packs>
+                                    <layers>
+                                        <layer>jaxrs-server</layer>
+                                    </layers>
+                                </configuration>
+                            </execution>
+
+                            <!-- Provision a cloud-server -->
+                            <execution>
+                                <id>bootable-jar-cloud-packaging</id>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                                <phase>process-test-resources</phase>
+                                <configuration>
+                                    <output-file-name>test-wildfly-cloud.jar</output-file-name>
+                                    <hollowJar>true</hollowJar>
+                                    <record-state>false</record-state>
+                                    <log-time>${galleon.log.time}</log-time>
+                                    <offline>true</offline>
+                                    <plugin-options>
+                                        <jboss-maven-dist/>
+                                        <jboss-fork-embedded>${galleon.fork.embedded}</jboss-fork-embedded>
+                                    </plugin-options>
+                                    <feature-packs>
+                                        <feature-pack>
+                                            <groupId>${testsuite.ee.galleon.pack.groupId}</groupId>
+                                            <artifactId>${testsuite.ee.galleon.pack.artifactId}</artifactId>
+                                            <version>${testsuite.ee.galleon.pack.version}</version>
+                                            <inherit-configs>false</inherit-configs>
+                                            <inherit-packages>false</inherit-packages>
+                                        </feature-pack>
+                                    </feature-packs>
+                                    <layers>
+                                        <layer>cloud-server</layer>
+                                    </layers>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <!-- Disable default-test -->
+                            <execution>
+                                <id>default-test</id>
+                                <phase>none</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                            </execution>
+
+                            <!-- Tests against the datasource-web-server without legacy security -->
+                            <execution>
+                                <id>web-profile-layers.surefire</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${jboss.dist}</JBOSS_HOME>
+                                    </environmentVariables>
+                                    <systemPropertyVariables>
+                                        <bootable.jar>${project.build.directory}/test-wildfly-web-profile.jar</bootable.jar>
+                                        <arquillian.xml>arquillian-bootable.jar</arquillian.xml>
+                                    </systemPropertyVariables>
+                                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                    <excludes>
+                                        <!-- requires legacy-security -->
+                                        <exclude>org/jboss/as/test/integration/web/security/**/*TestCase.java</exclude>
+                                        <!-- requires ee-concurrency -->
+                                        <exclude>org/jboss/as/test/integration/ee/concurrent/*TestCase.java</exclude>
+                                        <!-- Requires javax.validation.api module -->
+                                        <exclude>org/jboss/as/test/integration/web/annotationsmodule/WebModuleDeploymentTestCase.java</exclude>
+                                        <!-- requires https -->
+                                        <exclude>org/jboss/as/test/integration/web/handlers/RequestDumpingHandlerTestCase.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+
+                            <!-- Tests against the install with legacy security -->
+                            <execution>
+                                <id>legacy-security-layers.surefire</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <systemPropertyVariables>
+                                        <bootable.jar>${project.build.directory}/test-wildfly-web-legacy-security.jar</bootable.jar>
+                                        <arquillian.xml>arquillian-bootable.jar</arquillian.xml>
+                                    </systemPropertyVariables>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${project.build.directory}/wildfly-legacy-security</JBOSS_HOME>
+                                    </environmentVariables>
+                                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                    <includes>
+                                        <include>org/jboss/as/test/integration/web/security/**/*TestCase.java</include>
+                                    </includes>
+                                    <excludes>
+                                        <exclude>org/jboss/as/test/integration/web/security/**/TransportGuaranteeTestCase.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+
+                            <!-- Tests against the install with undertow-legacy-https -->
+                            <execution>
+                                <id>legacy-https-layers.surefire</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <systemPropertyVariables>
+                                        <bootable.jar>${project.build.directory}/test-wildfly-undertow-https.jar</bootable.jar>
+                                        <arquillian.xml>arquillian-bootable.jar</arquillian.xml>
+                                    </systemPropertyVariables>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${project.build.directory}/wildfly-legacy-https</JBOSS_HOME>
+                                    </environmentVariables>
+                                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                    <includes>
+                                        <include>org/jboss/as/test/integration/web/handlers/RequestDumpingHandlerTestCase.java</include>
+                                        <!-- TODO this has special setup logic for -Delytron vs not; needs a variant for this test setup
+                                             where elytron is configured but -Delytron is not set. -->
+                                        <!--include>org/jboss/as/test/integration/web/security/**/TransportGuaranteeTestCase.java</include-->
+                                    </includes>
+                                </configuration>
+                            </execution>
+
+                            <!-- Tests against the jaxrs-server install -->
+                            <execution>
+                                <id>jaxrs-server-layers.surefire</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${jboss.dist}</JBOSS_HOME>
+                                    </environmentVariables>
+                                    <systemPropertyVariables>
+                                        <bootable.jar>${project.build.directory}/test-wildfly-jaxrs.jar</bootable.jar>
+                                        <arquillian.xml>arquillian-bootable.jar</arquillian.xml>
+                                    </systemPropertyVariables>
+                                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                    <excludes>
+                                        <!-- requires legacy-security -->
+                                        <exclude>org/jboss/as/test/integration/web/security/**/*TestCase.java</exclude>
+                                        <!-- requires ee-concurrency -->
+                                        <exclude>org/jboss/as/test/integration/ee/concurrent/*TestCase.java</exclude>
+                                        <!-- Requires javax.validation.api module -->
+                                        <exclude>org/jboss/as/test/integration/web/annotationsmodule/WebModuleDeploymentTestCase.java</exclude>
+                                        <!-- requires https -->
+                                        <exclude>org/jboss/as/test/integration/web/handlers/RequestDumpingHandlerTestCase.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+
+                            <!-- Tests against the cloud-server install -->
+                            <!-- Reuse the microprofile.surefire execution as the valid tests are the same.
+                                 Just point to standalone.xml and the locally provisioned installation. -->
+                            <execution>
+                                <id>microprofile.surefire</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${jboss.dist}</JBOSS_HOME>
+                                    </environmentVariables>
+                                    <systemPropertyVariables>
+                                        <bootable.jar>${project.build.directory}/test-wildfly-cloud.jar</bootable.jar>
+                                        <arquillian.xml>arquillian-bootable.jar</arquillian.xml>
+                                        <jboss.server.config.file.name>standalone.xml</jboss.server.config.file.name>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
     </profiles>
 </project>
