@@ -269,5 +269,5 @@ same parameters as the first start, so if you start a server non-gracefully, you
 non-gracefully.
 
 Finally, there's `start-mode=suspend`. In the event that an administrator specifies a suspended start as well as a
-non-graceful start, the suspended start will "win". That is to say, the server will start in a suspended mode, and
-the `graceful-start=false` will be disregarded and the server will log a message indicating that this is happening.
+non-graceful start, the suspended start will "win". That is to say, the server will start in a suspended mode,
+the `graceful-start=false` will be disregarded, and the server will log a message indicating that this is happening.
